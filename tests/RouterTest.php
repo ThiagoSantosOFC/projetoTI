@@ -22,6 +22,6 @@ $router->route('GET', '/teste');
 $output = ob_get_clean();
 
 // Verifica se o output é o esperado
-assert($output === 'Teste OK', 'Rota /teste não funcionou corretamente.');
+assert($output === 'Teste OK', 'Rota /teste  não funcionou corretamente.');
 
 echo "Todos os testes passaram!\n";

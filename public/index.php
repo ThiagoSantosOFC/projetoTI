@@ -5,8 +5,8 @@
  */
 
 // Carrega o autoloader (se for criado) ou os arquivos necessários
-require_once __DIR__ . '/../src/Router.php';
-require_once __DIR__ . '/../src/Auth.php';
+require_once __DIR__ . '/../src/api/Router.php';
+require_once __DIR__ . '/../src/api/Auth.php';
 
 // Instancia o roteador principal
 $router = new Router();
@@ -24,5 +24,5 @@ $router->addRoute('POST', '/login', function() {
     }
 });
 
-// Outras rotas poderão ser adicionadas aqui, como rotas para dashboard, histórico etc.
+// Outras rotas poderão ser adicionadas aqui, como rotas para dashboard, histórico, etc.
 $router->route($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
