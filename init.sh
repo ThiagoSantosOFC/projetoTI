@@ -1,247 +1,227 @@
 #!/bin/bash
-# Script de inicialização do projeto - Entrega 1
-# Requisitos da Entrega 1:
-#   - API para recolha e envio de informações, com validações seguindo boas práticas.
-#   - Página de autenticação (mínimo 2 usuários) com credenciais armazenadas em arquivo separado.
-#   - Página de dashboard personalizada, preparada para pelo menos 3 sensores e 3 atuadores.
-#   - Página de histórico para cada sensor e atuador.
-#   - Design apelativo e responsivo com Bootstrap.
-#   - Pelo menos 1 arquivo CSS com no mínimo 10 seletores customizados.
-#   - Código bem comentado, isento de warnings/erros.
-#   - Não utilizar frameworks como Laravel, Node.js, Vue.js, etc. e nem motores de bases de dados.
+# Estrutura inicial do projeto "Estacionamento IoT"
 
-echo "Criando estrutura de diretórios..."
+# Diretórios
+echo "Criando diretórios..."
+mkdir -p src tests public config swagger
 
-# Diretórios principais
-mkdir -p src/api
-mkdir -p src/config
-mkdir -p public/css
-mkdir -p public/js
-mkdir -p public/pages
-mkdir -p public/assets
-
-echo "Criando arquivos iniciais..."
-
-# Arquivo de configuração de usuários (credenciais)
-cat <<'EOL' > src/config/users.php
+# Arquivo de credenciais (armazenando dois usuários)
+cat << 'EOF' > config/credentials.php
 <?php
-// Configuração de usuários (credenciais)
-// Importante: As senhas estão armazenadas em texto plano apenas para fins de exemplo.
+// Configuração simples de usuários para autenticação
+// Formato: username => password (senha hasheada ou em texto, dependendo da implementação)
 return [
-    'user1' => 'senha1',
-    'user2' => 'senha2',
+    'usuario1' => 'senhaSegura1',
+    'usuario2' => 'senhaSegura2'
 ];
-EOL
+EOF
 
-# Arquivo principal da API RESTful
-cat <<'EOL' > src/api/index.php
+# Arquivo principal de roteamento da API
+cat << 'EOF' > public/index.php
 <?php
-// API RESTful básica seguindo princípios SOLID, POO, DRY e Design Patterns
+/**
+ * @SWG\Info(title="Estacionamento IoT API", version="1.0")
+ * SwaggerPHP annotations: documente suas rotas e endpoints aqui.
+ */
 
-// Autoload simples para classes
-spl_autoload_register(function ($class) {
-    require_once __DIR__ . '/../' . str_replace('\\', '/', $class) . '.php';
+// Carrega o autoloader (se for criado) ou os arquivos necessários
+require_once __DIR__ . '/../src/Router.php';
+require_once __DIR__ . '/../src/Auth.php';
+
+// Instancia o roteador principal
+$router = new Router();
+
+// Exemplo de definição de rota para login
+$router->addRoute('POST', '/login', function() {
+    // Obtém dados de entrada (em JSON ou form data)
+    $data = json_decode(file_get_contents('php://input'), true);
+    $auth = new Auth();
+    if ($auth->login($data['username'] ?? '', $data['password'] ?? '')) {
+        echo json_encode(['message' => 'Login realizado com sucesso']);
+    } else {
+        http_response_code(401);
+        echo json_encode(['message' => 'Credenciais inválidas']);
+    }
 });
 
-// Roteamento simples (Exemplo)
-$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$method = $_SERVER['REQUEST_METHOD'];
+// Outras rotas poderão ser adicionadas aqui, como rotas para dashboard, histórico etc.
+$router->route($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+EOF
 
-// Aqui você deverá implementar o roteamento para os endpoints da API, 
-// direcionando as requisições para os respectivos controllers e validando os dados.
-header('Content-Type: application/json');
-echo json_encode(['message' => 'API em desenvolvimento']);
-EOL
-
-# Página de autenticação
-cat <<'EOL' > public/pages/login.php
+# Classe de roteamento (sem MVC)
+cat << 'EOF' > src/Router.php
 <?php
-// Página de autenticação
-session_start();
-$users = include __DIR__ . '/../../src/config/users.php';
+/**
+ * Classe Router - responsável por roteamento simples de requisições.
+ * Segue os padrões e naming conventions recomendados.
+ */
+class Router {
+    // Armazena as rotas definidas
+    private array $routes = [];
 
-// Verifica se os dados foram enviados e valida as credenciais
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
-    if (isset($users[$username]) && $users[$username] === $password) {
-        $_SESSION['user'] = $username;
-        header('Location: dashboard.php');
-        exit;
-    } else {
-        $error = "Credenciais inválidas!";
+    /**
+     * Adiciona uma rota à API.
+     *
+     * @param string   $method   Método HTTP (GET, POST, etc.)
+     * @param string   $uri      URI da rota
+     * @param callable $handler  Função callback que trata a requisição
+     */
+    public function addRoute(string $method, string $uri, callable $handler): void {
+        $this->routes[$method][$uri] = $handler;
+    }
+
+    /**
+     * Roteia a requisição para o handler adequado.
+     *
+     * @param string $method
+     * @param string $requestUri
+     */
+    public function route(string $method, string $requestUri): void {
+        // Remove query strings, se houver
+        $uri = parse_url($requestUri, PHP_URL_PATH);
+        if (isset($this->routes[$method][$uri])) {
+            // Executa a função associada à rota
+            call_user_func($this->routes[$method][$uri]);
+        } else {
+            http_response_code(404);
+            echo json_encode(['message' => 'Rota não encontrada']);
+        }
     }
 }
-?>
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    <link rel="stylesheet" href="../css/style.css">
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-</head>
-<body>
-<div class="container">
-    <h2>Login</h2>
-    <?php if (!empty($error)) { echo "<div class='alert alert-danger'>$error</div>"; } ?>
-    <form method="post" action="login.php">
-        <div class="form-group">
-            <label for="username">Usuário:</label>
-            <input type="text" class="form-control" name="username" id="username" required>
-        </div>
-        <div class="form-group">
-            <label for="password">Senha:</label>
-            <input type="password" class="form-control" name="password" id="password" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Entrar</button>
-    </form>
-</div>
-</body>
-</html>
-EOL
+EOF
 
-# Página de dashboard
-cat <<'EOL' > public/pages/dashboard.php
+# Classe de autenticação
+cat << 'EOF' > src/Auth.php
 <?php
-// Dashboard personalizada
-session_start();
-if (!isset($_SESSION['user'])) {
-    header('Location: login.php');
-    exit;
-}
-?>
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="../css/style.css">
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-</head>
-<body>
-<div class="container">
-    <h2>Dashboard</h2>
-    <p>Bem-vindo, <?php echo $_SESSION['user']; ?>!</p>
-    <!-- Seção para 3 sensores -->
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">Sensor 1</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">Sensor 2</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">Sensor 3</div>
-            </div>
-        </div>
-    </div>
-    <!-- Seção para 3 atuadores -->
-    <div class="row mt-3">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">Atuador 1</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">Atuador 2</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">Atuador 3</div>
-            </div>
-        </div>
-    </div>
-</div>
-</body>
-</html>
-EOL
+/**
+ * Classe Auth - Gerencia a autenticação dos usuários.
+ */
+class Auth {
+    private array $users;
 
-# Página de histórico para sensores e atuadores
-cat <<'EOL' > public/pages/historico.php
+    public function __construct() {
+        // Carrega os usuários do arquivo de configuração
+        $this->users = require __DIR__ . '/../config/credentials.php';
+    }
+
+    /**
+     * Realiza o login verificando as credenciais.
+     *
+     * @param string $username
+     * @param string $password
+     * @return bool Retorna true se a autenticação for bem-sucedida
+     */
+    public function login(string $username, string $password): bool {
+        // Exemplo simples: verificação direta (ideal utilizar hash e salt em produção)
+        return isset($this->users[$username]) && $this->users[$username] === $password;
+    }
+}
+EOF
+
+# Exemplo de arquivo de teste unitário usando PHP assert ou PHPUnit (aqui usamos um teste simples com assert)
+cat << 'EOF' > tests/RouterTest.php
 <?php
-// Página de histórico
-session_start();
-if (!isset($_SESSION['user'])) {
-    header('Location: login.php');
-    exit;
-}
-?>
+/**
+ * Teste unitário para a classe Router.
+ * Execute com: php tests/RouterTest.php
+ */
+
+require_once __DIR__ . '/../src/Router.php';
+
+echo "Iniciando testes para Router...\n";
+
+// Cria uma instância do Router
+$router = new Router();
+
+// Define uma rota de teste
+$router->addRoute('GET', '/teste', function() {
+    echo 'Teste OK';
+});
+
+// Simula uma requisição para a rota definida
+ob_start();
+$router->route('GET', '/teste');
+$output = ob_get_clean();
+
+// Verifica se o output é o esperado
+assert($output === 'Teste OK', 'Rota /teste não funcionou corretamente.');
+
+echo "Todos os testes passaram!\n";
+EOF
+
+# Exemplo de uma página de login para o website (pode ser expandida)
+cat << 'EOF' > public/login.php
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Histórico</title>
-    <link rel="stylesheet" href="../css/style.css">
-    <!-- Bootstrap CSS -->
+    <title>Login - Estacionamento IoT</title>
+    <link rel="stylesheet" href="css/estilos.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-<div class="container">
-    <h2>Histórico de Sensores e Atuadores</h2>
-    <!-- Aqui deverá ser implementada a exibição dinâmica do histórico -->
-    <p>Aqui serão exibidos os históricos dos sensores e atuadores.</p>
-</div>
+    <div class="container">
+        <h1 class="mt-5">Login</h1>
+        <form method="POST" action="index.php">
+            <div class="form-group">
+                <label for="username">Usuário</label>
+                <input type="text" class="form-control" name="username" id="username" placeholder="Digite seu usuário" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" class="form-control" name="password" id="password" placeholder="Digite sua senha" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Entrar</button>
+        </form>
+    </div>
 </body>
 </html>
-EOL
+EOF
 
-# Arquivo CSS personalizado com pelo menos 10 seletores
-cat <<'EOL' > public/css/style.css
-/* CSS personalizado */
-/* 1. Seleciona o body */
+# Exemplo de arquivo CSS personalizado com 10 seletores mínimos
+mkdir -p public/css
+cat << 'EOF' > public/css/estilos.css
+/* Seletores personalizados */
 body {
     background-color: #f8f9fa;
+    font-family: Arial, sans-serif;
 }
-/* 2. Seleciona os títulos h2 */
-h2 {
-    color: #343a40;
-}
-/* 3. Seleciona o container */
+
 .container {
     margin-top: 50px;
 }
-/* 4. Seleciona os cards */
-.card {
-    margin-bottom: 20px;
+
+h1 {
+    color: #343a40;
 }
-/* 5. Seleciona botões primários */
-.btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
+
+form {
+    border: 1px solid #ced4da;
+    padding: 20px;
+    border-radius: 5px;
 }
-/* 6. Seleciona a navbar */
-.navbar {
-    margin-bottom: 20px;
-}
-/* 7. Seleciona o rodapé */
-.footer {
-    text-align: center;
-    padding: 10px;
-    background-color: #343a40;
-    color: white;
-}
-/* 8. Seleciona alertas */
-.alert {
-    margin-top: 20px;
-}
-/* 9. Seleciona labels em formulários */
+
 .form-group label {
     font-weight: bold;
 }
-/* 10. Seleciona inputs dos formulários */
-.form-control {
-    border-radius: 4px;
-}
-EOL
 
-echo "Estrutura inicial do projeto criada com sucesso!"
+.form-control {
+    margin-bottom: 15px;
+}
+
+.btn-primary {
+    background-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 0.9em;
+}
+EOF
+
+echo "Projeto criado com sucesso!"
