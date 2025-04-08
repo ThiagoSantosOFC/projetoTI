@@ -6,6 +6,17 @@
 class Router {
     // Armazena as rotas definidas
     private array $routes = [];
+    private string $basePath = '';
+
+    /**
+     * Define o caminho base da aplicação
+     *
+     * @param string $basePath Caminho base (ex: '/projetoti/public')
+     */
+    public function setBasePath(string $basePath): void {
+        // Garante que o caminho base não termine com '/'
+        $this->basePath = rtrim($basePath, '/');
+    }
 
     /**
      * Adiciona uma rota à API.
@@ -27,12 +38,13 @@ class Router {
     public function route(string $method, string $requestUri): void {
         // Remove query strings, se houver
         $uri = parse_url($requestUri, PHP_URL_PATH);
+
         if (isset($this->routes[$method][$uri])) {
-            // Executa a função associada à rota
             call_user_func($this->routes[$method][$uri]);
         } else {
             http_response_code(404);
-            echo json_encode(['message' => 'Rota não encontrada']);
+            echo json_encode(['message' => 'Rota nao encontrada']);
         }
     }
+
 }

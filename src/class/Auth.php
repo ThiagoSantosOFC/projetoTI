@@ -1,12 +1,12 @@
 <?php
 /**
- * Classe Auth - Gerencia a autenticação dos usuários.
+ * Classe Auth - Gerencia a autenticação dos utilizadores.
  */
 class Auth {
     private array $users;
 
     public function __construct() {
-        // Carrega os usuários do arquivo de configuração
+        // Carrega os utilizadores do arquivo de configuração
         $this->users = require __DIR__ . '/../config/credentials.php';
     }
 
