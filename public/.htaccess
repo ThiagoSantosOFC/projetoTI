@@ -1,0 +1,11 @@
+# Ativa o módulo rewrite
+RewriteEngine On
+RewriteBase /
+
+# Permitir acesso a arquivos e diretórios existentes
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Redirecionar todas as outras requisições para index.php
+RewriteRule ^ index.php [L]
