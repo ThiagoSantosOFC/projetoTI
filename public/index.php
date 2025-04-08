@@ -28,7 +28,7 @@ function authMiddleware($callback): Closure
 {
     return function() use ($callback) {
         if (!isAuthenticated()) {
-            header('Location: /projetoti/public/');
+            header('Location: /');
             exit;
         }
 
@@ -64,7 +64,6 @@ $router->addRoute('POST', '/src/api/v1/login', function() {
 $router->addRoute('GET', '/dashboard', authMiddleware(function() {
     header('Content-Type: text/html; charset=utf-8');
     $filePath = __DIR__ . '/views/dashboard.php';
-    var_dump($filePath);
     if (file_exists($filePath)) {
         include $filePath;
     } else {
