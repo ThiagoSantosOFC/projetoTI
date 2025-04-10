@@ -1,8 +1,9 @@
 <?php
 /**
  * Classe Router - responsável por roteamento simples de requisições.
- * Segue os padrões e naming conventions recomendados.
+ *
  */
+
 class Router {
     // Armazena as rotas definidas
     private array $routes = [];

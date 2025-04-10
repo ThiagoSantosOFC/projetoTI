@@ -1,0 +1,183 @@
+[
+  {
+    "id": "sensor_1a2b3c",
+    "name": "Sensor de Temperatura Sala 101",
+    "type": "temperature",
+    "location": "Edifício A, Piso 1, Sala 101",
+    "status": "active",
+    "metadata": {
+      "model": "TempSense X200",
+      "manufacturer": "SensorTech",
+      "installedDate": "2023-03-15",
+      "calibrationDate": "2023-03-10",
+      "maxRange": "60",
+      "minRange": "-20"
+    },
+    "lastReading": {
+      "value": 22.5,
+      "unit": "C",
+      "timestamp": 1693564800
+    }
+  },
+  {
+    "id": "sensor_4d5e6f",
+    "name": "Sensor de Humidade Laboratório",
+    "type": "humidity",
+    "location": "Edifício B, Piso 0, Laboratório",
+    "status": "active",
+    "metadata": {
+      "model": "HumidAir Pro",
+      "manufacturer": "ClimaTech",
+      "installedDate": "2023-02-20",
+      "accuracy": "±2%"
+    },
+    "lastReading": {
+      "value": 45.8,
+      "unit": "%",
+      "timestamp": 1693564830
+    }
+  },
+  {
+    "id": "sensor_7g8h9i",
+    "name": "Sensor de Presença Corredor",
+    "type": "presence",
+    "location": "Edifício A, Piso 2, Corredor Principal",
+    "status": "active",
+    "metadata": {
+      "model": "MotionEye X1",
+      "manufacturer": "SecureSense",
+      "installedDate": "2023-04-05",
+      "detectionRange": "10m"
+    },
+    "lastReading": {
+      "value": false,
+      "timestamp": 1693564860
+    }
+  },
+  {
+    "id": "sensor_0j1k2l",
+    "name": "Sensor Estacionamento 15",
+    "type": "parking",
+    "location": "Parque Subterrâneo, Lugar 15",
+    "status": "active",
+    "metadata": {
+      "model": "ParkSense Ultra",
+      "manufacturer": "ParkTech",
+      "installedDate": "2023-01-10",
+      "technology": "ultrasonic"
+    },
+    "lastReading": {
+      "occupied": true,
+      "timestamp": 1693564890
+    }
+  },
+  {
+    "id": "sensor_3m4n5o",
+    "name": "Sensor de CO2 Auditório",
+    "type": "air_quality",
+    "location": "Edifício C, Piso 1, Auditório",
+    "status": "maintenance",
+    "metadata": {
+      "model": "AirQual 3000",
+      "manufacturer": "EnviroTech",
+      "installedDate": "2022-11-15",
+      "calibrationDate": "2023-05-01",
+      "nextCalibrationDate": "2024-05-01"
+    },
+    "lastReading": {
+      "value": 720,
+      "unit": "ppm",
+      "timestamp": 1693564920
+    }
+  },
+  {
+    "id": "sensor_6p7q8r",
+    "name": "Sensor de Luz Exterior",
+    "type": "light",
+    "location": "Exterior, Jardim Sul",
+    "status": "active",
+    "metadata": {
+      "model": "LightSense Outdoor",
+      "manufacturer": "IllumiTech",
+      "installedDate": "2022-10-05",
+      "powerSource": "solar"
+    },
+    "lastReading": {
+      "value": 8500,
+      "unit": "lux",
+      "timestamp": 1693564950
+    }
+  },
+  {
+    "id": "sensor_9s0t1u",
+    "name": "Sensor de Fluxo de Água",
+    "type": "water_flow",
+    "location": "Edifício A, Cave, Sala de Máquinas",
+    "status": "active",
+    "metadata": {
+      "model": "HydroFlow 500",
+      "manufacturer": "WaterTech",
+      "installedDate": "2023-06-10",
+      "pipeSize": "DN25"
+    },
+    "lastReading": {
+      "value": 25.4,
+      "unit": "L/min",
+      "timestamp": 1693564980
+    }
+  },
+  {
+    "id": "sensor_2v3w4x",
+    "name": "Sensor de Ruído Cantina",
+    "type": "noise",
+    "location": "Edifício B, Piso 0, Cantina",
+    "status": "active",
+    "metadata": {
+      "model": "SoundSense A2",
+      "manufacturer": "AcousticTech",
+      "installedDate": "2023-01-22"
+    },
+    "lastReading": {
+      "value": 65.2,
+      "unit": "dB",
+      "timestamp": 1693565010
+    }
+  },
+  {
+    "id": "sensor_5y6z7a",
+    "name": "Contador de Pessoas Entrada Principal",
+    "type": "people_counter",
+    "location": "Edifício A, Piso 0, Entrada Principal",
+    "status": "active",
+    "metadata": {
+      "model": "PeopleTrack Pro",
+      "manufacturer": "TrackSense",
+      "installedDate": "2022-12-05",
+      "technology": "infrared beam"
+    },
+    "lastReading": {
+      "count": 128,
+      "in": 85,
+      "out": 43,
+      "timestamp": 1693565040
+    }
+  },
+  {
+    "id": "sensor_8b9c0d",
+    "name": "Sensor de Consumo Elétrico",
+    "type": "energy",
+    "location": "Edifício C, Cave, Quadro Elétrico",
+    "status": "active",
+    "metadata": {
+      "model": "PowerMeter X10",
+      "manufacturer": "EnergyTech",
+      "installedDate": "2022-09-18",
+      "maxLoad": "100kW"
+    },
+    "lastReading": {
+      "value": 42.8,
+      "unit": "kW",
+      "timestamp": 1693565070
+    }
+  }
+]

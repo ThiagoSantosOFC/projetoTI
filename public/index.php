@@ -1,44 +1,46 @@
 <?php
+declare(strict_types=1);
 /**
  * @SWG\Info(title="Estacionamento IoT API", version="1.0")
  * SwaggerPHP annotations: documente suas rotas e endpoints aqui.
  */
 
-// Carrega o autoloader (se for criado) ou os arquivos necessários
-require_once __DIR__ . '/../src/class/Router.php';
-require_once __DIR__ . '/../src/class/Auth.php';
+//iniciar o autoload
+require_once __DIR__ . '/../vendor/autoload.php';
+// Importa as classes necessárias
+use App\Core\Router\MiddlewareInterface;
+use App\Infrastructure\Router\Router;
 
-// Instancia o roteador principal
+// Instancia o router principal
 $router = new Router();
+$router->setBasePath(''); // Ajuste conforme necessário para o seu ambiente
 
-// Função para verificar se o utilizador está autenticado
-function isAuthenticated(): bool
+// Classe de middleware para autenticação
+class AuthMiddleware implements MiddlewareInterface
 {
-    // Iniciar sessão se ainda não estiver iniciada
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    public function process(callable $next, array $params = []): void
+    {
+        // Iniciar sessão se ainda não estiver iniciada
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
 
-    // Verificar se o utilizador está autenticado
-    return isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true;
-}
-
-// Middleware para rotas protegidas
-function authMiddleware($callback): Closure
-{
-    return function() use ($callback) {
-        if (!isAuthenticated()) {
+        // Verificar se o utilizador está autenticado
+        if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true) {
             header('Location: /');
             exit;
         }
 
-        // Se estiver autenticado, executa o callback original
-        return call_user_func($callback);
-
-    };
+        // Se estiver autenticado, executa o próximo middleware ou handler
+        $next($params);
+    }
 }
 
-$router->addRoute('GET', '/', function() {
+// Criando instância do middleware de autenticação
+$authMiddleware = new AuthMiddleware();
+
+// Define as rotas da aplicação
+$router->get('/', function() {
     // Define o cabeçalho para HTML
     header('Content-Type: text/html; charset=utf-8');
 
@@ -51,17 +53,14 @@ $router->addRoute('GET', '/', function() {
         echo '<h1>Erro 404</h1><p>Página inicial não encontrada.</p>';
     }
 });
-$router->addRoute('POST', '/src/api/v1/login', function() {
+
+$router->post('/src/api/v1/login', function() {
     // Incluir o arquivo de login
-    require_once __DIR__ . '/../src/api/v1/login.php';
-
-
+    require_once __DIR__ . '/../src/Api/v1/login.php';
 });
 
-
-// Rota para o dashboard (protegida)
-
-$router->addRoute('GET', '/dashboard', authMiddleware(function() {
+// Rota para o dashboard (protegida com middleware)
+$router->addRouteWithMiddleware('GET', '/dashboard', function() {
     header('Content-Type: text/html; charset=utf-8');
     $filePath = __DIR__ . '/views/dashboard.php';
     if (file_exists($filePath)) {
@@ -70,10 +69,31 @@ $router->addRoute('GET', '/dashboard', authMiddleware(function() {
         http_response_code(404);
         echo '<h1>Erro 404</h1><p>Dashboard não encontrado.</p>';
     }
-}));
+}, [$authMiddleware]);
+
+// Adicionando rotas de API para sensores (apenas como exemplo)
+$router->get('/src/api/v1/sensors', function() {
+    header('Content-Type: application/json; charset=utf-8');
+    // Aqui você pode incluir a lógica para buscar todos os sensores
+    echo json_encode(['message' => 'Lista de sensores']);
+});
+
+$router->get('/src/api/v1/sensors/:id', function($params) {
+    header('Content-Type: application/json; charset=utf-8');
+    $id = $params['id'];
+    // Aqui você pode incluir a lógica para buscar um sensor específico
+    echo json_encode(['message' => "Detalhes do sensor $id"]);
+});
 
 
+$router->post('/src/api/v1/sensors', function() {
+    header('Content-Type: application/json; charset=utf-8');
+    // Aqui você pode incluir a lógica para criar um sensor
+    echo json_encode(['message' => 'Sensor criado']);
+});
 
-$router->route($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
-
-
+// Responder à requisição atual
+$method = $_SERVER['REQUEST_METHOD'];
+$uri = $_SERVER['REQUEST_URI'];
+// Roteia a requisição
+$router->resolve($method, $uri);
