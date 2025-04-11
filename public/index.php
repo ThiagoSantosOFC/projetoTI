@@ -10,6 +10,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // Importa as classes necessárias
 use App\Core\Router\MiddlewareInterface;
 use App\Infrastructure\Router\Router;
+use App\Infrastructure\Sensor\JsonSensorRepository;
 
 // Instancia o router principal
 $router = new Router();
@@ -71,12 +72,37 @@ $router->addRouteWithMiddleware('GET', '/dashboard', function() {
     }
 }, [$authMiddleware]);
 
-// Adicionando rotas de API para sensores (apenas como exemplo)
+// Adicionando rotas de API para sensores
 $router->get('/src/api/v1/sensors', function() {
     header('Content-Type: application/json; charset=utf-8');
-    // Aqui você pode incluir a lógica para buscar todos os sensores
-    echo json_encode(['message' => 'Lista de sensores']);
+
+    // Instanciar o repositório de sensores
+    $sensorRepository = new JsonSensorRepository();
+
+    // Buscar todos os sensores
+    $sensors = $sensorRepository->findAll();
+
+    // Converter sensores em arrays para garantir a serialização correta
+    $sensorsArray = array_map(function($sensor) {
+        return [
+            'id' => $sensor->getId(),
+            'name' => $sensor->getName(),
+            'type' => $sensor->getType()->value,
+            'location' => $sensor->getLocation(),
+            'status' => $sensor->getStatus()->value,
+            'metadata' => $sensor->getMetadata()
+        ];
+    }, $sensors);
+
+    // Retornar os sensores como JSON
+    echo json_encode([
+        'success' => true,
+        'data' => $sensorsArray,
+        'count' => count($sensors)
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 });
+
+
 
 $router->get('/src/api/v1/sensors/:id', function($params) {
     header('Content-Type: application/json; charset=utf-8');
