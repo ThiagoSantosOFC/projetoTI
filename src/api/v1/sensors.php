@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 
-use App\Api\RequestParser;
-use App\Api\ResponseFactory;
+use App\api\RequestParser;
+use App\api\ResponseFactory;
 use App\Infrastructure\Sensor\JsonSensorRepository;
 use App\Infrastructure\Sensor\SensorSimulator;
 use App\Service\SensorService;

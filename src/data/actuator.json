@@ -1,0 +1,50 @@
+[
+  {
+    "id": "act_1",
+    "name": "Portão Principal",
+    "type": "gate",
+    "location": "Entrada",
+    "status": "off",
+    "metadata": {
+      "manufacturer": "SecurGate",
+      "model": "SG-2000",
+      "installDate": "2023-05-15"
+    }
+  },
+{
+    "id": "act_2",
+    "name": "Iluminação Corredor Principal",
+    "type": "light",
+    "location": "Corredor Principal",
+    "status": "on",
+    "metadata": {
+      "manufacturer": "LightTech",
+      "model": "LT-5000",
+      "installDate": "2023-06-20"
+    }
+  },
+  {
+    "id": "act_3",
+    "name": "Aquecimento Sala 101",
+    "type": "heating",
+    "location": "Sala 101",
+    "status": "off",
+    "metadata": {
+      "manufacturer": "HeatMaster",
+      "model": "HM-3000",
+      "installDate": "2023-07-10"
+    }
+  },
+  {
+    "id": "act_4",
+    "name": "Ventilação Laboratório",
+    "type": "ventilation",
+    "location": "Laboratório",
+    "status": "on",
+    "metadata": {
+      "manufacturer": "AirFlow",
+      "model": "AF-1000",
+      "installDate": "2023-08-05"
+    }
+  }
+  ]

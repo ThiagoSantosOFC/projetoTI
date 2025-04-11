@@ -9,6 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 // Importa as classes necessárias
 use App\Core\Router\MiddlewareInterface;
+use App\Infrastructure\Actuator\JsonActuatorRepository;
 use App\Infrastructure\Router\Router;
 use App\Infrastructure\Sensor\JsonSensorRepository;
 
@@ -103,19 +104,57 @@ $router->get('/src/api/v1/sensors', function() {
 });
 
 
-
 $router->get('/src/api/v1/sensors/:id', function($params) {
     header('Content-Type: application/json; charset=utf-8');
     $id = $params['id'];
-    // Aqui você pode incluir a lógica para buscar um sensor específico
+    //  incluir a lógica para buscar um sensor específico
     echo json_encode(['message' => "Detalhes do sensor $id"]);
 });
 
-
 $router->post('/src/api/v1/sensors', function() {
     header('Content-Type: application/json; charset=utf-8');
-    // Aqui você pode incluir a lógica para criar um sensor
+    //  incluir a lógica para criar um sensor
     echo json_encode(['message' => 'Sensor criado']);
+});
+
+//adicionando rota para obter todos os atuadores
+/**
+ * @param array $actuators
+ * @return void
+ */
+function extracted(array $actuators): void
+{
+    $actuatorsArray = array_map(function ($actuator) {
+        return [
+            'id' => $actuator->getId(),
+            'name' => $actuator->getName(),
+            'type' => $actuator->getType()->value,
+            'location' => $actuator->getLocation(),
+            'status' => $actuator->getStatus()->value,
+            'metadata' => $actuator->getMetadata(),
+            'lastAction' => $actuator->getLastAction()
+        ];
+    }, $actuators);
+
+    // Retornar os atuadores como JSON
+    echo json_encode([
+        'success' => true,
+        'data' => $actuatorsArray,
+        'count' => count($actuators)
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+}
+
+$router->get('/src/api/v1/actuators', function() {
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Instanciar o repositório de atuadores
+    $actuatorRepository = new JsonActuatorRepository();
+
+    // Buscar todos os atuadores
+    $actuators = $actuatorRepository->findAll();
+
+    // Converter atuadores em arrays para garantir a serialização correta
+    extracted($actuators);
 });
 
 // Responder à requisição atual

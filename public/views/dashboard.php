@@ -220,10 +220,10 @@ $username = $_SESSION['user'] ?? 'Utilizador';
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <input type="text" class="form-control" id="sensorSearch" placeholder="Pesquisar sensores...">
+                                    <label for="sensorSearch"></label><input type="text" class="form-control" id="sensorSearch" placeholder="Pesquisar sensores...">
                                 </div>
                                 <div class="col-md-3">
-                                    <select class="form-select" id="sensorTypeFilter">
+                                    <label for="sensorTypeFilter"></label><select class="form-select" id="sensorTypeFilter">
                                         <option value="">Todos os Tipos</option>
                                         <option value="presenca">Presença</option>
                                         <option value="proximidade">Proximidade</option>
@@ -232,7 +232,7 @@ $username = $_SESSION['user'] ?? 'Utilizador';
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <select class="form-select" id="sensorStatusFilter">
+                                    <label for="sensorStatusFilter"></label><select class="form-select" id="sensorStatusFilter">
                                         <option value="">Todos os Estados</option>
                                         <option value="ativo">Ativo</option>
                                         <option value="inativo">Inativo</option>
@@ -307,10 +307,10 @@ $username = $_SESSION['user'] ?? 'Utilizador';
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-3">
-                                    <input type="text" class="form-control" id="logSearch" placeholder="Pesquisar registos...">
+                                    <label for="logSearch"></label><input type="text" class="form-control" id="logSearch" placeholder="Pesquisar registos...">
                                 </div>
                                 <div class="col-md-3">
-                                    <select class="form-select" id="logTypeFilter">
+                                    <label for="logTypeFilter"></label><select class="form-select" id="logTypeFilter">
                                         <option value="">Todos os Tipos</option>
                                         <option value="sensor">Sensor</option>
                                         <option value="atuador">Atuador</option>
@@ -319,7 +319,7 @@ $username = $_SESSION['user'] ?? 'Utilizador';
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <input type="date" class="form-control" id="logDateFilter">
+                                    <label for="logDateFilter"></label><input type="date" class="form-control" id="logDateFilter">
                                 </div>
                                 <div class="col-md-3">
                                     <button class="btn btn-secondary w-100" id="resetLogFilters">Limpar</button>
