@@ -1,11 +1,14 @@
-# Ativa o módulo rewrite
-RewriteEngine On
-RewriteBase /
 
-# Permitir acesso a arquivos e diretórios existentes
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-# Redirecionar todas as outras requisições para index.php
-RewriteRule ^ index.php [L]
+    # Ajuste o RewriteBase para onde esse .htaccess está servido
+    RewriteBase /ti/ti156/projetoTI/public/
+
+    # Se o recurso não existir como arquivo ou diretório…
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # …envia tudo para index.php mantendo query string
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

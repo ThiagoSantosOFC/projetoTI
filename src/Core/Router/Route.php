@@ -5,52 +5,58 @@ namespace App\Core\Router;
 
 class Route
 {
-    public string $method {
-        get {
-            return $this->method;
-        }
-    }
-    private string $pattern {
-        get {
-            return $this->pattern;
-        }
-    }
+    public string $method;
+    private string $pattern;
     /** @var callable */
-    public $handler {
-        get {
-            return $this->handler;
-        }
-    }
-    public array $params = [] {
-        get {
-            return $this->params;
-        }
-        set {
-            $this->params = $value;
-        }
-    }
-    private array $middlewares {
-        get {
-            return $this->middlewares;
-        }
-    }
+    public $handler;
+    public array $params = [];
+    private array $middlewares;
 
     public function __construct(string $method, string $pattern, callable $handler, array $middlewares = [])
     {
         $this->method = strtoupper($method);
+        // Armazenar o padrão sem basePath
         $this->pattern = $pattern;
         $this->handler = $handler;
         $this->middlewares = $middlewares;
     }
 
+    public function getMethod(): string
+    {
+        return $this->method;
+    }
+
+    public function getPattern(): string
+    {
+        return $this->pattern;
+    }
+
+    public function getHandler(): callable
+    {
+        return $this->handler;
+    }
+
+    public function getParams(): array
+    {
+        return $this->params;
+    }
+
+    public function setParams(array $params): void
+    {
+        $this->params = $params;
+    }
+
+    public function getMiddlewares(): array
+    {
+        return $this->middlewares;
+    }
+
     public function matches(string $uri): bool
     {
-        // Pattern exato
         if ($this->pattern === $uri) {
             return true;
         }
 
-        // Pattern com parâmetros
         $patternSegments = explode('/', trim($this->pattern, '/'));
         $uriSegments = explode('/', trim($uri, '/'));
 
@@ -61,20 +67,18 @@ class Route
         $params = [];
 
         foreach ($patternSegments as $index => $segment) {
-            // Verificar se é um parâmetro (começa com :)
             if (isset($segment[0]) && $segment[0] === ':') {
                 $paramName = substr($segment, 1);
                 $params[$paramName] = $uriSegments[$index];
                 continue;
             }
 
-            // Segmentos estáticos devem corresponder exatamente
             if ($segment !== $uriSegments[$index]) {
                 return false;
             }
         }
 
-        $this->params = $params;
+        $this->setParams($params);
         return true;
     }
 }

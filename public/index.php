@@ -1,52 +1,113 @@
 <?php
-declare(strict_types=1);
-/**
- * @SWG\Info(title="Estacionamento IoT API", version="1.0")
- * SwaggerPHP annotations: documente suas rotas e endpoints aqui.
- */
 
-//iniciar o autoload
+declare(strict_types=1);
+
+// ——————————————————————————
+// Configuração de erros para desenvolvimento
+// ——————————————————————————
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
+
+// ——————————————————————————
+// Autoload e imports
+// ——————————————————————————
 require_once __DIR__ . '/../vendor/autoload.php';
-// Importa as classes necessárias
+
 use App\Core\Router\MiddlewareInterface;
 use App\Infrastructure\Actuator\JsonActuatorRepository;
 use App\Infrastructure\Router\Router;
 use App\Infrastructure\Sensor\JsonSensorRepository;
 
-// Instancia o router principal
-$router = new Router();
-$router->setBasePath(''); // Ajuste conforme necessário para o seu ambiente
-
-// Classe de middleware para autenticação
+// ——————————————————————————
+// Middleware de autenticação
+// ——————————————————————————
 class AuthMiddleware implements MiddlewareInterface
 {
     public function process(callable $next, array $params = []): void
     {
-        // Iniciar sessão se ainda não estiver iniciada
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        // Verificar se o utilizador está autenticado
         if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true) {
-            header('Location: /');
+            // Redireciona para home se não estiver autenticado
+            header('Location: index.php?route=/');
             exit;
         }
 
-        // Se estiver autenticado, executa o próximo middleware ou handler
         $next($params);
     }
 }
 
-// Criando instância do middleware de autenticação
 $authMiddleware = new AuthMiddleware();
 
-// Define as rotas da aplicação
-$router->get('/', function() {
-    // Define o cabeçalho para HTML
-    header('Content-Type: text/html; charset=utf-8');
+// ——————————————————————————
+// Instancia o roteador
+// ——————————————————————————
+$router = new Router();
 
-    // Caminho para o arquivo HTML
+// ——————————————————————————
+// Normalização do REQUEST_URI para suportar ambientes sem .htaccess
+// ——————————————————————————
+if (isset($_GET['route'])) {
+    // Caso rota venha via query string (servidor da escola, sem .htaccess)
+    $requestUri = '/' . ltrim($_GET['route'], '/');
+} else {
+    // Caso normal, usa URI do servidor (com .htaccess local)
+    $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+    // Detecta o basePath dinamicamente (ex: /ti/ti156/projetoTI/public)
+    $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+
+// Obtém a URI completa da requisição
+    $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+// 1. Remove o basePath da URI
+    if (!empty($basePath) && strpos($requestUri, $basePath) === 0) {
+        $requestUri = substr($requestUri, strlen($basePath));
+    }
+
+// 2. Remove "/index.php" no início, se existir
+    if (strpos($requestUri, '/index.php') === 0) {
+        $requestUri = substr($requestUri, strlen('/index.php'));
+    }
+
+// 3. Se URI ficar vazia, seta para "/"
+    if ($requestUri === '') {
+        $requestUri = '/';
+    }
+
+}
+
+// Detecta o basePath dinamicamente (ex: /ti/ti156/projetoTI/public)
+$basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+
+// Define no roteador
+$router->setBasePath($basePath);
+
+// Define método e URI final
+$method = $_SERVER['REQUEST_METHOD'];
+$uri = $requestUri === '' ? '/' : $requestUri;
+
+// ——————————————————————————
+// Função para normalizar padrão de rota removendo basePath embutido
+// ——————————————————————————
+function normalizeRoutePattern(string $pattern, string $basePath): string
+{
+    if (!empty($basePath) && strpos($pattern, $basePath) === 0) {
+        return substr($pattern, strlen($basePath));
+    }
+    return $pattern;
+}
+
+// ——————————————————————————
+// Definição das rotas (sem basePath embutido)
+// ——————————————————————————
+
+// Página inicial
+$router->get(normalizeRoutePattern('/', $basePath), function () {
+    header('Content-Type: text/html; charset=utf-8');
     $filePath = __DIR__ . '/views/home.html';
     if (file_exists($filePath)) {
         echo file_get_contents($filePath);
@@ -56,13 +117,13 @@ $router->get('/', function() {
     }
 });
 
-$router->post('/src/api/v1/login', function() {
-    // Incluir o arquivo de login
+// Login
+$router->post(normalizeRoutePattern('/src/api/v1/login', $basePath), function () {
     require_once __DIR__ . '/../src/Api/v1/login.php';
 });
 
-// Rota para o dashboard (protegida com middleware)
-$router->addRouteWithMiddleware('GET', '/dashboard', function() {
+// Dashboard protegido
+$router->addRouteWithMiddleware('GET', normalizeRoutePattern('/dashboard', $basePath), function () {
     header('Content-Type: text/html; charset=utf-8');
     $filePath = __DIR__ . '/views/dashboard.php';
     if (file_exists($filePath)) {
@@ -73,57 +134,81 @@ $router->addRouteWithMiddleware('GET', '/dashboard', function() {
     }
 }, [$authMiddleware]);
 
-// Adicionando rotas de API para sensores
-$router->get('/src/api/v1/sensors', function() {
+// Sensores - todos
+$router->get(normalizeRoutePattern('/src/api/v1/sensors', $basePath), function () {
     header('Content-Type: application/json; charset=utf-8');
-
-    // Instanciar o repositório de sensores
     $sensorRepository = new JsonSensorRepository();
-
-    // Buscar todos os sensores
     $sensors = $sensorRepository->findAll();
 
-    // Converter sensores em arrays para garantir a serialização correta
-    $sensorsArray = array_map(function($sensor) {
+    $sensorsArray = array_map(function ($sensor) {
+        // getType() já retorna string, ou retorna null se algo deu errado
+        $type   = $sensor->getType()   ?? \App\Domain\Sensor\SensorType::UNKNOWN;
+        $status = $sensor->getStatus() ?? \App\Domain\Sensor\SensorStatus::UNKNOWN;
+
         return [
-            'id' => $sensor->getId(),
-            'name' => $sensor->getName(),
-            'type' => $sensor->getType()->value,
+            'id'       => $sensor->getId(),
+            'name'     => $sensor->getName(),
+            'type'     => $type,
             'location' => $sensor->getLocation(),
-            'status' => $sensor->getStatus()->value,
-            'metadata' => $sensor->getMetadata()
+            'status'   => $status,
+            'metadata' => $sensor->getMetadata(),
         ];
     }, $sensors);
 
-    // Retornar os sensores como JSON
     echo json_encode([
         'success' => true,
-        'data' => $sensorsArray,
-        'count' => count($sensors)
+        'data'    => $sensorsArray,
+        'count'   => count($sensors)
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 });
 
-
-$router->get('/src/api/v1/sensors/:id', function($params) {
+// Atuadores - todos
+$router->get(normalizeRoutePattern('/src/api/v1/actuators', $basePath), function () {
     header('Content-Type: application/json; charset=utf-8');
-    $id = $params['id'];
-    //  incluir a lógica para buscar um sensor específico
-    echo json_encode(['message' => "Detalhes do sensor $id"]);
+    $actuatorRepository = new JsonActuatorRepository();
+    $acts = $actuatorRepository->findAll();
+
+    $actsArray = array_map(function ($act) {
+        $type       = $act->getType()   ?? \App\Domain\Actuator\ActuatorType::UNKNOWN;
+        $status     = $act->getStatus() ?? \App\Domain\Actuator\ActuatorStatus::UNKNOWN;
+        $lastAction = $act->getLastAction(); // pode ser array ou null
+
+        return [
+            'id'         => $act->getId(),
+            'name'       => $act->getName(),
+            'type'       => $type,
+            'location'   => $act->getLocation(),
+            'status'     => $status,
+            'metadata'   => $act->getMetadata(),
+            'lastAction' => $lastAction,
+        ];
+    }, $acts);
+
+    echo json_encode([
+        'success' => true,
+        'data'    => $actsArray,
+        'count'   => count($acts)
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 });
 
-$router->post('/src/api/v1/sensors', function() {
+// Sensor por ID
+$router->get(normalizeRoutePattern('/src/api/v1/sensors/:id', $basePath), function ($params) {
     header('Content-Type: application/json; charset=utf-8');
-    //  incluir a lógica para criar um sensor
+    echo json_encode(['message' => "Detalhes do sensor {$params['id']}"]);
+});
+
+// Criar sensor
+$router->post(normalizeRoutePattern('/src/api/v1/sensors', $basePath), function () {
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['message' => 'Sensor criado']);
 });
 
-//adicionando rota para obter todos os atuadores
-/**
- * @param array $actuators
- * @return void
- */
-function extracted(array $actuators): void
-{
+// Atuadores
+$router->get(normalizeRoutePattern('/src/api/v1/actuators', $basePath), function () {
+    header('Content-Type: application/json; charset=utf-8');
+    $actuatorRepository = new JsonActuatorRepository();
+
+    $actuators = $actuatorRepository->findAll();
     $actuatorsArray = array_map(function ($actuator) {
         return [
             'id' => $actuator->getId(),
@@ -136,29 +221,21 @@ function extracted(array $actuators): void
         ];
     }, $actuators);
 
-    // Retornar os atuadores como JSON
     echo json_encode([
         'success' => true,
         'data' => $actuatorsArray,
         'count' => count($actuators)
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-}
-
-$router->get('/src/api/v1/actuators', function() {
-    header('Content-Type: application/json; charset=utf-8');
-
-    // Instanciar o repositório de atuadores
-    $actuatorRepository = new JsonActuatorRepository();
-
-    // Buscar todos os atuadores
-    $actuators = $actuatorRepository->findAll();
-
-    // Converter atuadores em arrays para garantir a serialização correta
-    extracted($actuators);
 });
 
-// Responder à requisição atual
-$method = $_SERVER['REQUEST_METHOD'];
-$uri = $_SERVER['REQUEST_URI'];
-// Roteia a requisição
+// ——————————————————————————
+// Debug — mostrar basePath, método e URI
+// ——————————————————————————
+var_dump('basePath:', $basePath);
+var_dump('method:', $method);
+var_dump('uri:', $uri);
+
+// ——————————————————————————
+// Roda o roteador
+// ——————————————————————————
 $router->resolve($method, $uri);

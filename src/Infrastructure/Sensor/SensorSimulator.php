@@ -6,8 +6,12 @@ namespace App\Infrastructure\Sensor;
 
 use App\Core\Sensor\SensorInterface;
 
+
 class SensorSimulator
 {
+    /**
+     * @throws RandomException
+     */
     public function generateReading(SensorInterface $sensor): array
     {
         switch ($sensor->getType()) {

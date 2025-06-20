@@ -1,26 +1,35 @@
 <?php
 // src/Domain/Actuator/Actuator.php
-
 namespace App\Domain\Actuator;
+
+use InvalidArgumentException;
 
 class Actuator
 {
     private string $id;
     private string $name;
-    private ActuatorType $type;
+    private string $type;       // string do ActuatorType::*
     private string $location;
-    private ActuatorStatus $status;
+    private string $status;     // string do ActuatorStatus::*
     private array $metadata;
     private ?array $lastAction = null;
 
     public function __construct(
         string $id,
         string $name,
-        ActuatorType $type,
+        string $type,
         string $location,
-        ActuatorStatus $status = ActuatorStatus::OFF,
+        string $status = ActuatorStatus::OFF,
         array $metadata = []
     ) {
+        if (!ActuatorType::isValid($type)) {
+            throw new InvalidArgumentException("Tipo inválido para atuador: $type");
+        }
+
+        if (!ActuatorStatus::isValid($status)) {
+            throw new InvalidArgumentException("Status inválido para atuador: $status");
+        }
+
         $this->id = $id;
         $this->name = $name;
         $this->type = $type;
@@ -44,13 +53,16 @@ class Actuator
         $this->name = $name;
     }
 
-    public function getType(): ActuatorType
+    public function getType(): string
     {
         return $this->type;
     }
 
-    public function setType(ActuatorType $type): void
+    public function setType(string $type): void
     {
+        if (!ActuatorType::isValid($type)) {
+            throw new InvalidArgumentException("Tipo inválido para atuador: $type");
+        }
         $this->type = $type;
     }
 
@@ -64,13 +76,16 @@ class Actuator
         $this->location = $location;
     }
 
-    public function getStatus(): ActuatorStatus
+    public function getStatus(): string
     {
         return $this->status;
     }
 
-    public function setStatus(ActuatorStatus $status): void
+    public function setStatus(string $status): void
     {
+        if (!ActuatorStatus::isValid($status)) {
+            throw new InvalidArgumentException("Status inválido para atuador: $status");
+        }
         $this->status = $status;
     }
 
@@ -96,83 +111,76 @@ class Actuator
 
     public function recordAction(array $action): void
     {
-        // Adiciona timestamp se não foi fornecido
         if (!isset($action['timestamp'])) {
             $action['timestamp'] = time();
         }
-
         $this->lastAction = $action;
     }
 
-    /**
-     * Liga o atuador
-     */
     public function turnOn(): void
     {
-        $this->status = ActuatorStatus::ON;
+        $this->setStatus(ActuatorStatus::ON);
         $this->recordAction([
             'action' => 'turn_on',
             'result' => 'success'
         ]);
     }
 
-    /**
-     * Desliga o atuador
-     */
     public function turnOff(): void
     {
-        $this->status = ActuatorStatus::OFF;
+        $this->setStatus(ActuatorStatus::OFF);
         $this->recordAction([
             'action' => 'turn_off',
             'result' => 'success'
         ]);
     }
 
-    /**
-     * Ativa o atuador
-     */
     public function activate(): void
     {
-        $this->status = ActuatorStatus::ACTIVE;
+        $this->setStatus(ActuatorStatus::ACTIVE);
         $this->recordAction([
             'action' => 'activate',
             'result' => 'success'
         ]);
     }
 
-    /**
-     * Desativa o atuador
-     */
     public function deactivate(): void
     {
-        $this->status = ActuatorStatus::INACTIVE;
+        $this->setStatus(ActuatorStatus::INACTIVE);
         $this->recordAction([
             'action' => 'deactivate',
             'result' => 'success'
         ]);
     }
 
-    /**
-     * Marca o atuador como em manutenção
-     */
     public function setMaintenance(): void
     {
-        $this->status = ActuatorStatus::MAINTENANCE;
+        $this->setStatus(ActuatorStatus::MAINTENANCE);
         $this->recordAction([
             'action' => 'set_maintenance',
             'result' => 'success'
         ]);
     }
 
-    /**
-     * Marca o atuador como com falha
-     */
     public function setFault(): void
     {
-        $this->status = ActuatorStatus::FAULT;
+        $this->setStatus(ActuatorStatus::FAULT);
         $this->recordAction([
             'action' => 'set_fault',
             'result' => 'success'
         ]);
+    }
+
+    public function getData(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'type' => $this->type,
+            'location' => $this->location,
+            'status' => $this->status,
+            'metadata' => $this->metadata,
+            'lastAction' => $this->lastAction
+        ];
     }
 }

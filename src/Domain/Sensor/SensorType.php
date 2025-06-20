@@ -4,36 +4,49 @@ declare(strict_types=1);
 
 namespace App\Domain\Sensor;
 
-enum SensorType: string
+class SensorType
 {
-    case TEMPERATURE = 'temperature';
-    case HUMIDITY = 'humidity';
-    case PRESSURE = 'pressure';
-    case LIGHT = 'light';
-    case MOTION = 'motion';
-    case SMOKE = 'smoke';
-    case GAS = 'gas';
-    case WATER = 'water';
-    case UNKNOWN = 'unknown';
+    public const TEMPERATURE = 'temperature';
+    public const HUMIDITY    = 'humidity';
+    public const PRESSURE    = 'pressure';
+    public const LIGHT       = 'light';
+    public const MOTION      = 'motion';
+    public const SMOKE       = 'smoke';
+    public const GAS         = 'gas';
+    public const WATER       = 'water';
+    public const UNKNOWN     = 'unknown';
+
+    private static array $values = [
+        self::TEMPERATURE,
+        self::HUMIDITY,
+        self::PRESSURE,
+        self::LIGHT,
+        self::MOTION,
+        self::SMOKE,
+        self::GAS,
+        self::WATER,
+        self::UNKNOWN,
+    ];
 
     public static function isValid(string $type): bool
     {
-        return in_array($type, array_column(self::cases(), 'value'));
+        return in_array($type, self::$values, true);
     }
 
-    public static function fromString(string $type): ?self
+    public static function fromString(string $type): string
     {
-        return match($type) {
-            'temperatura'    => self::TEMPERATURE,
-            'humidade'       => self::HUMIDITY,
-            'pressao'        => self::PRESSURE,
-            'luz'            => self::LIGHT,
-            'movimento'      => self::MOTION,
-            'fumo'           => self::SMOKE,
-            'gas'            => self::GAS,
-            'agua'           => self::WATER,
-            'desconhecido'   => self::UNKNOWN,
-            default => null
-        };
+        $map = [
+            'temperatura'  => self::TEMPERATURE,
+            'humidade'     => self::HUMIDITY,
+            'pressao'      => self::PRESSURE,
+            'luz'          => self::LIGHT,
+            'movimento'    => self::MOTION,
+            'fumo'         => self::SMOKE,
+            'gas'          => self::GAS,
+            'agua'         => self::WATER,
+            'desconhecido' => self::UNKNOWN,
+        ];
+
+        return $map[$type] ?? self::UNKNOWN;
     }
 }

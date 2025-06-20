@@ -59,6 +59,11 @@ $username = $_SESSION['user'] ?? 'Utilizador';
                             <i class="bi bi-gear me-2"></i>Configurações
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="logout-link">
+                            <i class="bi bi-box-arrow-right me-2"></i>Sair
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -675,7 +680,33 @@ $username = $_SESSION['user'] ?? 'Utilizador';
 <!-- Bootstrap 5 JS Bundle with Popper -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Custom JS -->
+<script>
+    document.getElementById('logout-link').addEventListener('click', async function(event) {
+        event.preventDefault();
 
+        try {
+            const response = await fetch('http://iot.dei.estg.ipleiria.pt/ti/ti156/projetoTI/src/api/v1/logout.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include' // importante para enviar cookies da sessão
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // Redireciona para a página de login ou inicial
+                window.location.href = '/login.html'; // altere para o caminho real
+            } else {
+                alert(result.message || 'Erro ao fazer logout');
+            }
+        } catch (error) {
+            alert('Erro de rede ao tentar fazer logout');
+            console.error(error);
+        }
+    });
+</script>
 </body>
 </html>
 

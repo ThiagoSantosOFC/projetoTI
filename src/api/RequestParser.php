@@ -12,7 +12,7 @@ class RequestParser
         $data = json_decode($input, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            ResponseFactory::error('JSON inválido: ' . json_last_error_msg(), 400);
+            ResponseFactory::error('JSON inválido: ' . json_last_error_msg());
         }
 
         return $data ?? [];
@@ -30,8 +30,10 @@ class RequestParser
         return $_SERVER['REQUEST_METHOD'];
     }
 
-    public static function getQueryParams(): array
+    public static function getQueryParams(string $string): array
     {
         return $_GET;
+
     }
+
 }

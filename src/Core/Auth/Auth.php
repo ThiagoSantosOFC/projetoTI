@@ -2,12 +2,14 @@
 /**
  * Classe Auth - Gerencia a autenticação dos utilizadores.
  */
+
+namespace App\Core\Auth;
 class Auth {
     private array $users;
 
     public function __construct() {
         // Carrega os utilizadores do arquivo de configuração
-        $this->users = require __DIR__ . '/../../config/credentials.php';
+        $this->users = require __DIR__ . '/../../../config/credentials.php';
     }
 
     /**

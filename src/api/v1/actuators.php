@@ -1,231 +1,103 @@
 <?php
-// src/api/v1/actuators.php
+declare(strict_types=1);
 
-use App\Domain\Actuator\ActuatorType;
-use App\Domain\Actuator\ActuatorStatus;
-use App\Infrastructure\Actuator\JsonActuatorRepository;
-use App\Service\ActuatorService;
 use App\api\RequestParser;
 use App\api\ResponseFactory;
+use App\Infrastructure\Actuator\JsonActuatorRepository;
+use App\Service\ActuatorService;
 
-// Rotas para atuadores
-$router->get('/src/api/v1/actuators', function() {
-    header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../../../vendor/autoload.php';
 
-    // Instanciar repositório e serviço
-    $actuatorRepository = new JsonActuatorRepository();
-    $actuatorService = new ActuatorService($actuatorRepository);
+$repo    = new JsonActuatorRepository();
+$service = new ActuatorService($repo);
 
-    // Obter todos os atuadores
-    $actuators = $actuatorService->getAllActuators();
+$method   = RequestParser::getMethod();        // GET, POST, PUT, DELETE
+$segments = RequestParser::getPathSegments();  // ex: [], ['123'], ['123','on']
+$id       = $segments[0] ?? null;
+$action   = $segments[1] ?? null;
 
-    // Converter atuadores para arrays para garantir serialização correta
-    extracted($actuators);
-});
+try {
+    // Rota: /actuators  (coleção)
+    if ($id === null) {
+        switch ($method) {
+            case 'GET':
+                // filtrar nulos antes de mapear para evitar erro de método chamado em null
+                $actuators = array_filter($service->getAllActuators(), fn($a) => $a !== null);
+                $all = array_map(fn($a) => $a->getData(), $actuators);
+                ResponseFactory::json(['data' => $all]);
+                break;
 
-// Obter atuador por ID
-$router->get('/src/api/v1/actuators/(\w+)', function($id) {
-    header('Content-Type: application/json; charset=utf-8');
+            case 'POST':
+                $data = RequestParser::getJsonBody();
+                if (empty($data['name']) || empty($data['location'])) {
+                    ResponseFactory::error('Campos obrigatórios: name, location');
+                }
+                $created = $service->createActuator($data);
+                if (!$created) {
+                    ResponseFactory::error('Falha ao criar atuador');
+                }
+                ResponseFactory::json(['data' => $created->getData()], 201);
+                break;
 
-    // Instanciar repositório e serviço
-    $actuatorRepository = new JsonActuatorRepository();
-    $actuatorService = new ActuatorService($actuatorRepository);
-
-    // Buscar atuador pelo ID
-    $actuator = $actuatorService->getActuatorById($id);
-
-    if (!$actuator) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Atuador não encontrado'
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        return;
+            default:
+                ResponseFactory::error('Método não permitido', 405);
+        }
+        exit;
     }
 
-    // Converter para array para serialização
-    $actuatorData = [
-        'id' => $actuator->getId(),
-        'name' => $actuator->getName(),
-        'type' => $actuator->getType()->value,
-        'location' => $actuator->getLocation(),
-        'status' => $actuator->getStatus()->value,
-        'metadata' => $actuator->getMetadata(),
-        'lastAction' => $actuator->getLastAction()
-    ];
+    // Rota: /actuators/{id} ou /actuators/{id}/{action}
+    switch ($method) {
+        case 'GET':
+            $actuator = $service->getActuatorById($id);
+            if (!$actuator) {
+                ResponseFactory::notFound('Atuador não encontrado');
+            }
+            ResponseFactory::json(['data' => $actuator->getData()]);
+            break;
 
-    echo json_encode([
-        'success' => true,
-        'data' => $actuatorData
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-});
+        case 'PUT':
+        case 'PATCH':
+            $data = RequestParser::getJsonBody();
+            $updated = $service->updateActuator($id, $data);
+            if (!$updated) {
+                ResponseFactory::notFound('Falha ao atualizar atuador');
+            }
+            ResponseFactory::json(['data' => $updated->getData()]);
+            break;
 
-// Criar novo atuador
-$router->post('/src/api/v1/actuators', function() {
-    header('Content-Type: application/json; charset=utf-8');
+        case 'DELETE':
+            $ok = $service->deleteActuator($id);
+            if ($ok) {
+                ResponseFactory::json(['success' => true]);
+            } else {
+                ResponseFactory::notFound('Falha ao remover atuador');
+            }
+            break;
 
-    // Parsear dados da requisição
-    $requestData = RequestParser::parseJsonRequest();
+        case 'POST':
+            // Se existe uma ação após o ID, trata ligar/desligar
+            if ($action === 'on' || $action === 'off') {
+                $actuator = $action === 'on'
+                    ? $service->turnOnActuator($id)
+                    : $service->turnOffActuator($id);
 
-    if (empty($requestData)) {
-        http_response_code(400);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Dados inválidos'
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        return;
+                if (!$actuator) {
+                    ResponseFactory::notFound('Atuador não encontrado');
+                }
+                ResponseFactory::json([
+                    'data' => [
+                        'id'     => $actuator->getId(),
+                        'status' => $actuator->getStatus()->value,
+                    ]
+                ]);
+            } else {
+                ResponseFactory::error('Ação desconhecida');
+            }
+            break;
+
+        default:
+            ResponseFactory::error('Método não permitido', 405);
     }
-
-    // Instanciar repositório e serviço
-    $actuatorRepository = new JsonActuatorRepository();
-    $actuatorService = new ActuatorService($actuatorRepository);
-
-    // Criar atuador
-    $actuator = $actuatorService->createActuator($requestData);
-
-    if (!$actuator) {
-        http_response_code(400);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Não foi possível criar o atuador'
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        return;
-    }
-
-    // Retornar dados do atuador criado
-    $actuatorData = [
-        'id' => $actuator->getId(),
-        'name' => $actuator->getName(),
-        'type' => $actuator->getType()->value,
-        'location' => $actuator->getLocation(),
-        'status' => $actuator->getStatus()->value,
-        'metadata' => $actuator->getMetadata()
-    ];
-
-    http_response_code(201);
-    echo json_encode([
-        'success' => true,
-        'message' => 'Atuador criado com sucesso',
-        'data' => $actuatorData
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-});
-
-// Atualizar atuador
-$router->put('/src/api/v1/actuators/(\w+)', function($id) {
-    header('Content-Type: application/json; charset=utf-8');
-
-    // Parsear dados da requisição
-    $requestData = RequestParser::parseJsonRequest();
-
-    // Instanciar repositório e serviço
-    $actuatorRepository = new JsonActuatorRepository();
-    $actuatorService = new ActuatorService($actuatorRepository);
-
-    // Atualizar atuador
-    $actuator = $actuatorService->updateActuator($id, $requestData);
-
-    if (!$actuator) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Atuador não encontrado ou dados inválidos'
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        return;
-    }
-
-    // Retornar dados atualizados
-    $actuatorData = [
-        'id' => $actuator->getId(),
-        'name' => $actuator->getName(),
-        'type' => $actuator->getType()->value,
-        'location' => $actuator->getLocation(),
-        'status' => $actuator->getStatus()->value,
-        'metadata' => $actuator->getMetadata()
-    ];
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Atuador atualizado com sucesso',
-        'data' => $actuatorData
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-});
-
-// Remover atuador
-$router->delete('/src/api/v1/actuators/(\w+)', function($id) {
-    header('Content-Type: application/json; charset=utf-8');
-
-    // Instanciar repositório e serviço
-    $actuatorRepository = new JsonActuatorRepository();
-    $actuatorService = new ActuatorService($actuatorRepository);
-
-    // Remover atuador
-    $success = $actuatorService->deleteActuator($id);
-
-    if (!$success) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Atuador não encontrado ou erro ao remover'
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        return;
-    }
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Atuador removido com sucesso'
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-});
-
-// Ligar atuador
-$router->post('/src/api/v1/actuators/(\w+)/on', function($id) {
-    header('Content-Type: application/json; charset=utf-8');
-
-    // Instanciar repositório e serviço
-    $actuatorRepository = new JsonActuatorRepository();
-    $actuatorService = new ActuatorService($actuatorRepository);
-
-    // Ligar atuador
-    $actuator = $actuatorService->turnOnActuator($id);
-
-    if (!$actuator) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Atuador não encontrado'
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        return;
-    }
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Atuador ligado com sucesso',
-        'status' => $actuator->getStatus()->value
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-});
-
-// Desligar atuador
-$router->post('/src/api/v1/actuators/(\w+)/off', function($id) {
-    header('Content-Type: application/json; charset=utf-8');
-
-    // Instanciar repositório e serviço
-    $actuatorRepository = new JsonActuatorRepository();
-    $actuatorService = new ActuatorService($actuatorRepository);
-
-    // Desligar atuador
-    $actuator = $actuatorService->turnOffActuator($id);
-
-    if (!$actuator) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Atuador não encontrado'
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        return;
-    }
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Atuador desligado com sucesso',
-        'status' => $actuator->getStatus()->value
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-});
+} catch (Throwable $e) {
+    ResponseFactory::error('Erro interno: ' . $e->getMessage(), 500);
+}

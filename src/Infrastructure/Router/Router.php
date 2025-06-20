@@ -12,28 +12,29 @@ class Router implements RouterInterface
 {
     /** @var Route[] */
     private array $routes = [];
-    public string $basePath = '' {
-        set {
-            $this->basePath = rtrim($value, '/');
-        }
+    private string $basePath = '';
+
+    public function setBasePath(string $basePath): void
+    {
+        // Remove barra final se houver
+        $this->basePath = rtrim($basePath, '/');
+    }
+
+    public function getBasePath(): string
+    {
+        return $this->basePath;
     }
 
     /**
-     * Adiciona uma rota.
-     *
-     * @param string   $method   Método HTTP (GET, POST, PUT, DELETE, etc.)
-     * @param string   $pattern  Padrão da rota (ex: '/sensors/:id')
-     * @param callable $handler  Função callback que trata a requisição
+     * Adiciona uma rota sem embutir basePath
      */
     public function addRoute(string $method, string $pattern, callable $handler): void
     {
-        $pattern = $this->basePath . '/' . ltrim($pattern, '/');
+        // Normalizar padrão da rota, removendo barra duplicada
+        $pattern = '/' . trim($pattern, '/');
         $this->routes[] = new Route($method, $pattern, $handler);
     }
 
-    /**
-     * Métodos de conveniência para rotas comuns
-     */
     public function get(string $pattern, callable $handler): void
     {
         $this->addRoute('GET', $pattern, $handler);
@@ -59,65 +60,13 @@ class Router implements RouterInterface
         $this->addRoute('DELETE', $pattern, $handler);
     }
 
-    /**
-     * Resolve uma requisição HTTP para o handler adequado.
-     *
-     * @param string $method    Método HTTP da requisição
-     * @param string $uri       URI da requisição
-     */
-    public function resolve(string $method, string $uri): void
+    public function addRouteWithMiddleware(string $method, string $pattern, callable $handler, array $middlewares = []): void
     {
-        $method = strtoupper($method);
+        $pattern = '/' . trim($pattern, '/');
 
-        // Remove query strings
-        $uri = parse_url($uri, PHP_URL_PATH) ?? $uri;
-
-        foreach ($this->routes as $route) {
-            if ($route->method === $method && $route->matches($uri)) {
-                $this->handleRoute($route);
-                return;
-            }
-        }
-
-        // Nenhuma rota encontrada
-        $this->handleNotFound();
-    }
-
-    /**
-     * Processa a rota encontrada
-     */
-    private function handleRoute(Route $route): void
-    {
-        try {
-            $handler = $route->handler;
-            $params = $route->params;
-
-            call_user_func($handler, $params);
-        } catch (\Throwable $e) {
-            ResponseFactory::error('Erro do servidor: ' . $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * Responde com 404 quando nenhuma rota for encontrada
-     */
-    private function handleNotFound(): void
-    {
-        ResponseFactory::notFound('Rota não encontrada');
-    }
-    public function addRouteWithMiddleware(
-        string $method,
-        string $pattern,
-        callable $handler,
-        array $middlewares = []
-    ): void {
-        $pattern = $this->basePath . '/' . ltrim($pattern, '/');
-
-        // Cria uma função de handler que executa os middlewares em ordem
         $wrappedHandler = function($params) use ($handler, $middlewares) {
             $next = $handler;
 
-            // Construir a pilha de middlewares (do último para o primeiro)
             foreach (array_reverse($middlewares) as $middleware) {
                 $currentNext = $next;
                 $next = function($p) use ($middleware, $currentNext) {
@@ -125,19 +74,68 @@ class Router implements RouterInterface
                 };
             }
 
-            // Executar a pilha de middlewares
             $next($params);
         };
 
-        $this->routes[] = new Route($method, $pattern, $wrappedHandler);
+        $this->routes[] = new Route($method, $pattern, $wrappedHandler, $middlewares);
     }
 
-    public function getBasePath(): string
+    /**
+     * Resolve a rota com debug para visualizar rotas e URI
+     */
+    public function resolve(string $method, string $uri): void
     {
-        return $this->basePath;
+        // Remove basePath do início da URI para casar com padrões
+        $basePath = $this->basePath;
+
+        if (!empty($basePath) && strpos($uri, $basePath) === 0) {
+            $uri = substr($uri, strlen($basePath));
+        }
+
+        // Normaliza URI
+        $uri = $uri === '' ? '/' : $uri;
+        $uri = '/' . trim($uri, '/');
+
+        // --- DEBUG: listar rotas e URI para ajudar no diagnóstico ---
+        echo "<pre>=== Rotas Registradas ===\n";
+        foreach ($this->routes as $route) {
+            echo $route->getMethod() . ' ' . $route->getPattern() . "\n";
+        }
+        echo "=== URI Recebida ===\n";
+        echo $method . ' ' . $uri . "\n";
+        echo "=====================\n";
+        echo "</pre>";
+        // exit; // descomente para parar aqui e analisar
+
+        foreach ($this->routes as $route) {
+            if ($route->getMethod() === $method && $route->matches($uri)) {
+                $handler = $route->getHandler();
+                $middlewares = $route->getMiddlewares();
+
+                $this->executeMiddlewares($middlewares, $handler, $route->getParams());
+                return;
+            }
+        }
+
+        // Se nenhuma rota bateu
+        http_response_code(404);
+        echo "Rota não encontrada";
     }
-    public function setBasePath(string $basePath): void
+
+    /**
+     * Executa a cadeia de middlewares e depois o handler final
+     */
+    private function executeMiddlewares(array $middlewares, callable $handler, array $params): void
     {
-        $this->basePath = rtrim($basePath, '/');
+        $next = $handler;
+
+        foreach (array_reverse($middlewares) as $middleware) {
+            $currentNext = $next;
+            $next = function($p) use ($middleware, $currentNext) {
+                $middleware->process($currentNext, $p);
+            };
+        }
+
+        $next($params);
     }
 }

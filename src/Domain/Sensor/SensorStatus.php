@@ -4,27 +4,37 @@ declare(strict_types=1);
 
 namespace App\Domain\Sensor;
 
-enum SensorStatus: string
+class SensorStatus
 {
-    case ACTIVE = 'ativo';
-    case INACTIVE = 'inativo';
-    case MAINTENANCE = 'manutencao';
-    case UNKNOWN = 'desconhecido';
-    case FAULT = 'falha';
+    public const ACTIVE      = 'active';
+    public const INACTIVE    = 'inactive';
+    public const MAINTENANCE = 'maintenance';
+    public const FAULT       = 'fault';
+    public const UNKNOWN     = 'unknown';
+
+    private static array $values = [
+        self::ACTIVE,
+        self::INACTIVE,
+        self::MAINTENANCE,
+        self::FAULT,
+        self::UNKNOWN,
+    ];
+
     public static function isValid(string $status): bool
     {
-        return in_array($status, array_column(self::cases(), 'value'));
+        return in_array($status, self::$values, true);
     }
 
-    public static function fromString(string $status): ?self
+    public static function fromString(string $status): string
     {
-        return match($status) {
-            'ativo' => self::ACTIVE,
-            'inativo' => self::INACTIVE,
-            'manutencao' => self::MAINTENANCE,
+        $map = [
+            'ativo'        => self::ACTIVE,
+            'inativo'      => self::INACTIVE,
+            'manutencao'   => self::MAINTENANCE,
+            'falha'        => self::FAULT,
             'desconhecido' => self::UNKNOWN,
-            'falha' => self::FAULT,
-            default => null
-        };
+        ];
+
+        return $map[$status] ?? self::UNKNOWN;
     }
 }

@@ -9,7 +9,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Estilos personalizados -->
-    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="http://iot.dei.estg.ipleiria.pt/ti/ti156/projetoTI/public/css/global.css">
 </head>
 <body>
 <!-- Navbar -->
@@ -208,16 +208,7 @@
         </div>
     </div>
 </section>
-<!-- CTA Section -->
-<section class="cta-section">
-    <div class="container text-center">
-        <h2 class="fw-bold mb-4">Pronto para Testar o Sistema?</h2>
-        <p class="lead mb-4">Crie a sua conta e experimente todas as funcionalidades do nosso sistema de gestão de estacionamento inteligente.</p>
-        <button type="button" class="btn btn-outline-light btn-lg" data-bs-toggle="modal" data-bs-target="#registoModal">
-            <i class="fas fa-user-plus me-2"></i> iniciar sessão
-        </button>
-    </div>
-</section>
+
 
 <!-- Footer -->
 <footer class="footer mt-5 py-4  text-white">
@@ -287,7 +278,7 @@
             loginAlert.classList.add('d-none');
 
             // Enviar requisição para a API
-            fetch('http://projetoti/src/api/v1/login', {
+            fetch('http://iot.dei.estg.ipleiria.pt/ti/ti156/projetoTI/src/api/v1/login.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -296,7 +287,8 @@
                     username: username,
                     password: password,
                     remember: remember
-                })
+                }),
+                credentials: 'include' // Importante para enviar cookies
             })
                 .then(response => response.json())
                 .then(data => {
@@ -312,7 +304,7 @@
                         loginAlert.textContent = data.message;
 
                         setTimeout(() => {
-                            window.location.href = '/dashboard';
+                            window.location.href = 'http://iot.dei.estg.ipleiria.pt/ti/ti156/projetoTI/public/index.php/dashboard';
 
                         }, 2000); // Redirecionar após 2 segundos
 
@@ -336,6 +328,6 @@
         });
     });
 </script>
-<script src="/js/scripts.js"></script>
+<script src="http://iot.dei.estg.ipleiria.pt/ti/ti156/projetoTI/public/js/scripts.js"></script>
 </body>
 </html>

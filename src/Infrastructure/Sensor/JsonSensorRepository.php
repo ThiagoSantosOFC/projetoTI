@@ -13,6 +13,7 @@ use App\Domain\Sensor\SensorType;
 class JsonSensorRepository implements SensorRepositoryInterface
 {
     private string $filePath;
+    /** @var Sensor[] */
     private array $sensors = [];
 
     /**
@@ -27,17 +28,13 @@ class JsonSensorRepository implements SensorRepositoryInterface
     /**
      * Carrega sensores do arquivo JSON
      */
-
     private function loadSensors(): void
     {
         if (!file_exists($this->filePath)) {
-            // Cria o diretório, se necessário
             $directory = dirname($this->filePath);
             if (!is_dir($directory)) {
                 mkdir($directory, 0755, true);
             }
-
-            // Cria um arquivo vazio se não existir
             file_put_contents($this->filePath, json_encode([]));
             return;
         }
@@ -47,33 +44,32 @@ class JsonSensorRepository implements SensorRepositoryInterface
             return;
         }
 
-        $sensorsData = json_decode($jsonContent, true);
-        if (!is_array($sensorsData)) {
+        $data = json_decode($jsonContent, true);
+        if (!is_array($data)) {
             return;
         }
 
-        foreach ($sensorsData as $sensorData) {
-            // Verifica a estrutura correta da classe Sensor
-            $type = SensorType::tryFrom($sensorData['type']) ?? SensorType::UNKNOWN;
-            $status = SensorStatus::tryFrom($sensorData['status'] ?? 'active') ?? SensorStatus::ACTIVE;
+        foreach ($data as $item) {
+            // Tipo
+            $rawType = $item['type'] ?? SensorType::UNKNOWN;
+            $type = SensorType::isValid($rawType) ? $rawType : SensorType::UNKNOWN;
 
-            // Adapte esta chamada consoante a assinatura correta do construtor da classe Sensor
+            // Status
+            $rawStatus = $item['status'] ?? SensorStatus::UNKNOWN;
+            $status = SensorStatus::isValid($rawStatus) ? $rawStatus : SensorStatus::UNKNOWN;
+
+            // Cria instância de Sensor (assumindo construtor: id, name, type, location, status)
             $sensor = new Sensor(
-                $sensorData['id'],
-                $sensorData['name'],
+                $item['id'],
+                $item['name'],
                 $type,
-                $sensorData['location'] ?? '',
-                $status,
+                $item['location'] ?? '',
+                $status
             );
 
-            // Adicionar leitura se houver (verifique o método correto)
-            if (isset($sensorData['lastReading'])) {
-                // Use o método correto para atualizar leituras
-                if (method_exists($sensor, 'updateReading')) {
-                    $sensor->updateReading($sensorData['lastReading']);
-                } elseif (method_exists($sensor, 'addReading')) {
-                    $sensor->addReading($sensorData['lastReading']);
-                }
+            // Se tiver leitura anterior, atualiza
+            if (isset($item['lastReading']) && method_exists($sensor, 'addReading')) {
+                $sensor->addReading($item['lastReading']);
             }
 
             $this->sensors[$sensor->getId()] = $sensor;
@@ -85,65 +81,55 @@ class JsonSensorRepository implements SensorRepositoryInterface
      */
     private function saveSensors(): void
     {
-        $sensorsData = [];
-
+        $out = [];
         foreach ($this->sensors as $sensor) {
-            $sensorData = [
-                'id' => $sensor->getId(),
-                'name' => $sensor->getName(),
-                'type' => $sensor->getType()->value,
+            $entry = [
+                'id'       => $sensor->getId(),
+                'name'     => $sensor->getName(),
+                'type'     => $sensor->getType(),
                 'location' => $sensor->getLocation(),
-                'status' => $sensor->getStatus()->value,
-                'metadata' => $sensor->getMetadata()
+                'status'   => $sensor->getStatus(),
+                'metadata' => $sensor->getMetadata(),
             ];
 
-            // Incluir leitura no JSON se existir (verifique o método correto)
-            if (method_exists($sensor, 'hasReading') && $sensor->hasReading()) {
-                $sensorData['lastReading'] = $sensor->getReading();
-            } elseif (method_exists($sensor, 'getLatestReading')) {
+            if (method_exists($sensor, 'getLatestReading')) {
                 $reading = $sensor->getLatestReading();
                 if ($reading !== null) {
-                    $sensorData['lastReading'] = $reading;
+                    $entry['lastReading'] = $reading;
                 }
+            } elseif (method_exists($sensor, 'hasReading') && $sensor->hasReading()) {
+                $entry['lastReading'] = $sensor->getReading();
             }
 
-            $sensorsData[] = $sensorData;
+            $out[] = $entry;
         }
 
         file_put_contents(
             $this->filePath,
-            json_encode($sensorsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
         );
     }
 
-    /**
-     * Retorna todos os sensores
-     */
+    /** @return Sensor[] */
     public function findAll(): array
     {
         return array_values($this->sensors);
     }
 
-    /**
-     * Busca um sensor pelo ID
-     */
     public function findById(string $id): ?SensorInterface
     {
         return $this->sensors[$id] ?? null;
     }
 
     /**
-     * Salva um sensor
+     * @param Sensor|SensorInterface $sensor
      */
-    public function save(Sensor|SensorInterface $sensor): void
+    public function save($sensor): void
     {
         $this->sensors[$sensor->getId()] = $sensor;
         $this->saveSensors();
     }
 
-    /**
-     * Exclui um sensor pelo ID
-     */
     public function delete(string $id): void
     {
         if (isset($this->sensors[$id])) {
@@ -153,24 +139,24 @@ class JsonSensorRepository implements SensorRepositoryInterface
     }
 
     /**
-     * Busca sensores por tipo
+     * @return Sensor[]
      */
-    public function findByType(SensorType $type): array
+    public function findByType(string $type): array
     {
         return array_values(array_filter(
             $this->sensors,
-            fn($sensor) => $sensor->getType() === $type
+            fn(Sensor $s) => $s->getType() === $type
         ));
     }
 
     /**
-     * Busca sensores por status
+     * @return Sensor[]
      */
-    public function findByStatus(SensorStatus $status): array
+    public function findByStatus(string $status): array
     {
         return array_values(array_filter(
             $this->sensors,
-            fn($sensor) => $sensor->getStatus() === $status
+            fn(Sensor $s) => $s->getStatus() === $status
         ));
     }
 }

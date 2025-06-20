@@ -11,6 +11,7 @@ use App\Domain\Sensor\Sensor;
 use App\Domain\Sensor\SensorStatus;
 use App\Domain\Sensor\SensorType;
 use App\Infrastructure\Sensor\SensorSimulator;
+use InvalidArgumentException;
 
 class SensorService implements SensorServiceInterface
 {
@@ -22,7 +23,7 @@ class SensorService implements SensorServiceInterface
         SensorSimulator $simulator
     ) {
         $this->repository = $repository;
-        $this->simulator = $simulator;
+        $this->simulator  = $simulator;
     }
 
     public function getAllSensors(): array
@@ -38,20 +39,31 @@ class SensorService implements SensorServiceInterface
 
     public function createSensor(array $data): SensorInterface
     {
-        // Converte os tipos enumerados corretamente
-        $type = isset($data['type']) ? SensorType::tryFrom($data['type']) ?? SensorType::UNKNOWN : SensorType::UNKNOWN;
-        $status = isset($data['status']) ? SensorStatus::tryFrom($data['status']) ?? SensorStatus::ACTIVE : SensorStatus::ACTIVE;
-
-        // Gera um ID se não foi fornecido
+        // ID
         if (empty($data['id'])) {
             $data['id'] = uniqid('sensor_');
         }
+
+        // Nome obrigatório
+        if (empty($data['name'])) {
+            throw new InvalidArgumentException("O campo 'name' é obrigatório");
+        }
+
+        // Tipo: aceita valor técnico ou nome amigável
+        $rawType = $data['type'] ?? '';
+        $type = SensorType::fromString($rawType)
+            ?? (SensorType::isValid($rawType) ? $rawType : SensorType::UNKNOWN);
+
+        // Status: igual
+        $rawStatus = $data['status'] ?? SensorStatus::ACTIVE;
+        $status = SensorStatus::fromString($rawStatus)
+            ?? (SensorStatus::isValid($rawStatus) ? $rawStatus : SensorStatus::ACTIVE);
 
         $sensor = new Sensor(
             $data['id'],
             $data['name'],
             $type,
-            $data['location'],
+            $data['location'] ?? '',
             $status,
             $data['metadata'] ?? []
         );
@@ -63,45 +75,42 @@ class SensorService implements SensorServiceInterface
     public function updateSensor(string $id, array $data): ?SensorInterface
     {
         $sensor = $this->repository->findById($id);
-
-        if (!$sensor) {
+        if (!($sensor instanceof Sensor)) {
             return null;
         }
 
-        if ($sensor instanceof Sensor) {
-            // Atualize cada campo se estiver presente nos dados
-            if (isset($data['name'])) {
-                $sensor->setName($data['name']);
-            }
-            if (isset($data['location'])) {
-                $sensor->setLocation($data['location']);
-            }
-            if (isset($data['type'])) {
-                $type = SensorType::tryFrom($data['type']) ?? $sensor->getType();
-                $sensor->setType($type);
-            }
-            if (isset($data['status'])) {
-                $status = SensorStatus::tryFrom($data['status']) ?? $sensor->getStatus();
-                $sensor->setStatus($status);
-            }
-            if (isset($data['metadata'])) {
-                $sensor->setMetadata($data['metadata']);
-            }
-
-            $this->repository->save($sensor);
+        if (isset($data['name'])) {
+            $sensor->setName($data['name']);
+        }
+        if (isset($data['location'])) {
+            $sensor->setLocation($data['location']);
+        }
+        if (isset($data['type'])) {
+            $rawType = $data['type'];
+            $type = SensorType::fromString($rawType)
+                ?? (SensorType::isValid($rawType) ? $rawType : $sensor->getType());
+            $sensor->setType($type);
+        }
+        if (isset($data['status'])) {
+            $rawStatus = $data['status'];
+            $status = SensorStatus::fromString($rawStatus)
+                ?? (SensorStatus::isValid($rawStatus) ? $rawStatus : $sensor->getStatus());
+            $sensor->setStatus($status);
+        }
+        if (isset($data['metadata'])) {
+            $sensor->setMetadata($data['metadata']);
         }
 
+        $this->repository->save($sensor);
         return $sensor;
     }
 
     public function deleteSensor(string $id): bool
     {
         $sensor = $this->repository->findById($id);
-
         if (!$sensor) {
             return false;
         }
-
         $this->repository->delete($id);
         return true;
     }
@@ -109,7 +118,6 @@ class SensorService implements SensorServiceInterface
     public function getSensorReading(string $id): ?array
     {
         $sensor = $this->repository->findById($id);
-
         if (!$sensor) {
             return null;
         }
@@ -119,8 +127,7 @@ class SensorService implements SensorServiceInterface
         }
 
         $reading = $this->simulator->generateReading($sensor);
-
-        if ($sensor instanceof Sensor) {
+        if ($sensor instanceof Sensor && method_exists($sensor, 'updateReading')) {
             $sensor->updateReading($reading);
             $this->repository->save($sensor);
         }
@@ -131,7 +138,6 @@ class SensorService implements SensorServiceInterface
     public function simulateSensorReading(string $id, array $data): ?array
     {
         $sensor = $this->repository->findById($id);
-
         if (!$sensor) {
             return null;
         }
@@ -140,7 +146,7 @@ class SensorService implements SensorServiceInterface
             return ['error' => 'Sensor não está ativo'];
         }
 
-        if ($sensor instanceof Sensor) {
+        if ($sensor instanceof Sensor && method_exists($sensor, 'updateReading')) {
             $sensor->updateReading($data);
             $this->repository->save($sensor);
         }

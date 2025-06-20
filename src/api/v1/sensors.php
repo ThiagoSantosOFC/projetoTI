@@ -1,7 +1,6 @@
 <?php
-
+// src/api/v1/sensors.php
 declare(strict_types=1);
-
 
 use App\api\RequestParser;
 use App\api\ResponseFactory;
@@ -9,96 +8,90 @@ use App\Infrastructure\Sensor\JsonSensorRepository;
 use App\Infrastructure\Sensor\SensorSimulator;
 use App\Service\SensorService;
 
-// Bootstrap
-$sensorRepository = new JsonSensorRepository();
-$sensorSimulator = new SensorSimulator();
-$sensorService = new SensorService($sensorRepository, $sensorSimulator);
+require_once __DIR__ . '/../../../vendor/autoload.php';
 
-// Roteamento
-$method = RequestParser::getMethod();
-$segments = RequestParser::getPathSegments();
+// 1) Bootstrap
+$repo      = new JsonSensorRepository();
+$simulator = new SensorSimulator();
+$service   = new SensorService($repo, $simulator);
 
-// /api/sensors.php/[id]?[action]
-$id = $segments[0] ?? null;
-$action = $_GET['action'] ?? null;
+// 2) Parser
+$method   = RequestParser::getMethod();        // GET, POST, PUT, DELETE
+$segments = RequestParser::getPathSegments();  // ex: [], ['123'], ['123']
+$id       = $segments[0] ?? null;
+$action   = RequestParser::getQueryParams('action'); // ou $_GET['action']
 
 try {
-    // Rotas de coleção
-    if (!$id) {
-        if ($method === 'GET') {
-            // Listar todos os sensores
-            $sensors = $sensorService->getAllSensors();
-            ResponseFactory::json(['data' => $sensors]);
-        } elseif ($method === 'POST') {
-            // Cria sensor
-            $data = RequestParser::getJsonBody();
+    // 3) Sem ID → coleção
+    if ($id === null) {
+        switch ($method) {
+            case 'GET':
+                $data = array_map(fn($s) => $s->getData(), $service->getAllSensors());
+                ResponseFactory::json(['data' => $data]);
+                break;
 
-            // Validação básica
-            if (empty($data['name']) || empty($data['type']) || empty($data['location'])) {
-                ResponseFactory::error('Campos obrigatórios: name, type, location');
-            }
+            case 'POST':
+                $payload = RequestParser::getJsonBody();
+                if (empty($payload['name'] || $payload['type'] || $payload['location'])) {
+                    ResponseFactory::error('Campos obrigatórios: name, type, location');
+                }
+                $sensor = $service->createSensor($payload);
+                ResponseFactory::json(['data' => $sensor->getData()], 201);
+                break;
 
-            $sensor = $sensorService->createSensor($data);
-            ResponseFactory::json(['data' => $sensor->getData()], 201);
-        } else {
-            ResponseFactory::error('Método não permitido', 405);
+            default:
+                ResponseFactory::error('Método não permitido', 405);
         }
+        exit;
     }
-    // Rotas de recurso
-    else {
-        if ($method === 'GET') {
+
+    // 4) Com ID → recurso ou ação especial
+    switch ($method) {
+        case 'GET':
             if ($action === 'reading') {
-                // Obter leitura do sensor
-                $reading = $sensorService->getSensorReading($id);
-
-                if ($reading === null) {
-                    ResponseFactory::notFound('Sensor não encontrado');
-                }
-
-                ResponseFactory::json(['data' => $reading]);
+                $reading = $service->getSensorReading($id);
+                $reading === null
+                    ? ResponseFactory::notFound('Sensor não encontrado')
+                    : ResponseFactory::json(['data' => $reading]);
             } else {
-                // Obter detalhes do sensor
-                $sensor = $sensorService->getSensorById($id);
-
-                if (!$sensor) {
-                    ResponseFactory::notFound('Sensor não encontrado');
-                }
-
-                ResponseFactory::json(['data' => $sensor->getData()]);
+                $sensor = $service->getSensorById($id);
+                $sensor === null
+                    ? ResponseFactory::notFound('Sensor não encontrado')
+                    : ResponseFactory::json(['data' => $sensor->getData()]);
             }
-        } elseif ($method === 'PUT' || $method === 'PATCH') {
-            // Atualizar sensor
-            $data = RequestParser::getJsonBody();
-            $sensor = $sensorService->updateSensor($id, $data);
+            break;
 
-            if (!$sensor) {
-                ResponseFactory::notFound('Sensor não encontrado');
+        case 'PUT':
+        case 'PATCH':
+            $payload = RequestParser::getJsonBody();
+            $updated = $service->updateSensor($id, $payload);
+            $updated === null
+                ? ResponseFactory::notFound('Sensor não encontrado')
+                : ResponseFactory::json(['data' => $updated->getData()]);
+            break;
+
+        case 'POST':
+            if ($action === 'simulate') {
+                $payload = RequestParser::getJsonBody();
+                $reading = $service->simulateSensorReading($id, $payload);
+                $reading === null
+                    ? ResponseFactory::notFound('Sensor não encontrado')
+                    : ResponseFactory::json(['data' => $reading]);
+            } else {
+                ResponseFactory::error('Ação desconhecida');
             }
+            break;
 
-            ResponseFactory::json(['data' => $sensor->getData()]);
-        } elseif ($method === 'POST' && $action === 'simulate') {
-            // Simular leitura
-            $data = RequestParser::getJsonBody();
-            $reading = $sensorService->simulateSensorReading($id, $data);
+        case 'DELETE':
+            $deleted = $service->deleteSensor($id);
+            $deleted
+                ? ResponseFactory::json(['success' => true])
+                : ResponseFactory::notFound('Sensor não encontrado');
+            break;
 
-            if ($reading === null) {
-                ResponseFactory::notFound('Sensor não encontrado');
-            }
-
-            ResponseFactory::json(['data' => $reading]);
-        } elseif ($method === 'DELETE') {
-            // Excluir sensor
-            $success = $sensorService->deleteSensor($id);
-
-            if (!$success) {
-                ResponseFactory::notFound('Sensor não encontrado');
-            }
-
-            ResponseFactory::json(['success' => true]);
-        } else {
+        default:
             ResponseFactory::error('Método não permitido', 405);
-        }
     }
-} catch (Exception $e) {
-    ResponseFactory::error('Erro do servidor: ' . $e->getMessage(), 500);
+} catch (Throwable $e) {
+    ResponseFactory::error('Erro interno: '.$e->getMessage(), 500);
 }

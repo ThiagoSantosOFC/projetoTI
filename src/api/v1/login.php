@@ -1,66 +1,82 @@
 <?php
-// Habilitar CORS para permitir requisições Ajax
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Content-Type: application/json; charset=UTF-8");
+declare(strict_types=1);
 
-// Se a requisição for OPTIONS (preflight), retornar apenas os headers e finalizar
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
-}
+require_once __DIR__ . '/../../../vendor/autoload.php';
 
-// Verificar se é uma requisição POST
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405); // Method Not Allowed
-    echo json_encode(['success' => false, 'message' => 'Método não permitido']);
-    exit;
-}
+use App\api\ResponseFactory;
+use App\Core\Auth\Auth;
+use App\Infrastructure\Middleware\CorsMiddleware;
 
-// Obter o corpo da requisição
-$data = json_decode(file_get_contents('php://input'), true);
-
-// Verificar se os campos necessários foram fornecidos
-if (!isset($data['username']) || !isset($data['password'])) {
-    http_response_code(400); // Bad Request
-    echo json_encode(['success' => false, 'message' => 'Nome de utilizador e palavra-passe são obrigatórios']);
-    exit;
-}
-
-// Incluir a classe Auth
-require_once __DIR__ . '/../../class/Auth.php';
-
-// Criar instância da classe Auth
-$auth = new Auth();
-
-// Verificar as credenciais
-$username = $data['username'];
-$password = $data['password'];
-$remember = $data['remember'] ?? false;
-
-if ($auth->login($username, $password)) {
-    // Iniciar sessão se ainda não estiver iniciada
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
+// Aplicar middleware CORS
+$cors = new CorsMiddleware();
+$cors->process(function() {
+    // Verificar se é uma requisição POST
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        ResponseFactory::error('Método não permitido', 405);
+        return;
     }
 
-    // Guardar informações do utilizador na sessão
-    $_SESSION['user'] = $username;
-    $_SESSION['authenticated'] = true;
+    try {
+        // Obter dados do corpo da requisição
+        $data = json_decode(file_get_contents('php://input'), true);
 
-    // Se "lembrar-me" estiver ativado, criar um cookie
-    if ($remember) {
-        // Cookie válido por 30 dias (em segundos)
-        setcookie('remember_user', $username, time() + (30 * 24 * 60 * 60), '/');
+        // Verificar se os dados são válidos
+        if (!$data || !isset($data['username']) || !isset($data['password'])) {
+            ResponseFactory::error('Nome de utilizador e palavra-passe são obrigatórios');
+            return;
+        }
+
+        $username = $data['username'];
+        $password = $data['password'];
+        $remember = $data['remember'] ?? false;
+
+        // Instanciar o Auth
+        $auth = new Auth();
+
+        // Verificar credenciais
+        if ($auth->login($username, $password)) {
+            // Iniciar sessão se necessário
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+
+            // Guardar informações na sessão
+            $_SESSION['user'] = $username;
+            $_SESSION['authenticated'] = true;
+
+            // Configurar cookie "lembrar-me" se solicitado
+            if ($remember) {
+                $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+                $sameSite = 'Strict';
+
+                setcookie(
+                    'remember_user',
+                    $username,
+                    [
+                        'expires' => time() + (30 * 24 * 60 * 60),
+                        'path' => '/',
+                        'domain' => '',
+                        'secure' => $secure,
+                        'httponly' => true,
+                        'samesite' => $sameSite
+                    ]
+                );
+            }
+
+            // Resposta de sucesso
+            ResponseFactory::json([
+                'success' => true,
+                'message' => 'Login realizado com sucesso',
+                'user' => [
+                    'username' => $username
+                ]
+            ]);
+        } else {
+            // Resposta de erro de autenticação
+            ResponseFactory::error('Nome de utilizador ou palavra-passe incorretos', 401);
+        }
+    } catch (Exception $e) {
+        // Resposta de erro do servidor
+        ResponseFactory::error('Erro no servidor: ' . $e->getMessage(), 500);
     }
-
-    // Retornar resposta de sucesso
-    echo json_encode(['success' => true, 'message' => 'Login realizado com sucesso']);
-} else {
-    // Retornar resposta de erro
-    http_response_code(401); // Unauthorized
-    echo json_encode(['success' => false, 'message' => 'Nome de utilizador ou palavra-passe incorretos']);
-}
-
-
-
+}, []);
