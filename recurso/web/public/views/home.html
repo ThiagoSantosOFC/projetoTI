@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Resource Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/css/global.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="bi bi-cpu"></i> IoT Monitor
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#features">Funcionalidades</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#about">Como Funciona</a></li>
+                    <li class="nav-item">
+                        <button class="btn btn-custom btn-custom-primary ms-2" data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section d-flex align-items-center">
+        <div class="container text-center text-md-start">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1>Monitorização IoT em Tempo Real</h1>
+                    <p class="lead mb-4">
+                        Plataforma completa para monitorizar sensores, controlar atuadores e visualizar
+                        histórico dos seus dispositivos IoT numa interface simples e intuitiva.
+                    </p>
+                    <button class="btn btn-light btn-lg px-4 me-2" data-bs-toggle="modal" data-bs-target="#loginModal">
+                        <i class="bi bi-box-arrow-in-right"></i> Aceder ao Painel
+                    </button>
+                    <a href="#features" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-info-circle"></i> Saber Mais
+                    </a>
+                </div>
+                <div class="col-lg-6 text-center d-none d-lg-block">
+                    <i class="bi bi-cpu" style="font-size: 12rem; opacity: 0.2;"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Funcionalidades</h2>
+            <p class="text-muted">Tudo o que precisa para gerir os seus dispositivos IoT</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="icon"><i class="bi bi-speedometer2"></i></div>
+                    <h5>Sensores em Tempo Real</h5>
+                    <p class="text-muted small">Visualize leituras de temperatura, humidade, pressão e outros sensores com atualização automática.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="icon"><i class="bi bi-toggle-on"></i></div>
+                    <h5>Controlo de Atuadores</h5>
+                    <p class="text-muted small">Ligue e desligue relés, motores e outros atuadores remotamente com um clique.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    <h5>Histórico e Gráficos</h5>
+                    <p class="text-muted small">Consulte o histórico de leituras e visualize gráficos de evolução dos seus dispositivos.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="icon"><i class="bi bi-camera"></i></div>
+                    <h5>Captura de Imagens</h5>
+                    <p class="text-muted small">Veja a última imagem capturada pela câmara e consulte o histórico de fotografias.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About / How it works -->
+    <section id="about" class="bg-light py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <h2 class="fw-bold">Como Funciona</h2>
+                    <p class="text-muted">
+                        A plataforma IoT Resource Monitor permite-lhe acompanhar todos os seus dispositivos
+                        num único painel de controlo. Cada recurso (sensor ou atuador) é armazenado como uma
+                        pasta com ficheiros de texto simples, garantindo simplicidade e transparência.
+                    </p>
+                    <ul class="list-unstyled mt-4">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Registo automático de leituras</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Histórico completo com timestamps</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> API RESTful para integração</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Autenticação segura com bcrypt</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Interface responsiva e moderna</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6">
+                    <div class="bg-white p-4 rounded-3 shadow-sm">
+                        <h5 class="fw-bold mb-3">Arquitetura</h5>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;">1</div>
+                            <div><strong>Dispositivo</strong><br><small class="text-muted">Envia dados via API REST</small></div>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;">2</div>
+                            <div><strong>Servidor</strong><br><small class="text-muted">Processa e armazena em ficheiros TXT</small></div>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;">3</div>
+                            <div><strong>Dashboard</strong><br><small class="text-muted">Apresenta dados em tempo real</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="bi bi-cpu"></i> IoT Resource Monitor</h5>
+                    <p class="small mb-0">Plataforma de monitorização e controlo de dispositivos IoT.</p>
+                </div>
+                <div class="col-md-3">
+                    <h6>Links</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="#features">Funcionalidades</a></li>
+                        <li><a href="#about">Sobre</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h6>Contacto</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="bi bi-envelope"></i> suporte@iotmonitor.pt</li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-3" style="border-color: rgba(255,255,255,0.1);">
+            <p class="text-center small mb-0">&copy; 2026 IoT Resource Monitor. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div class="modal fade modal-login" id="loginModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-shield-lock"></i> Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm" onsubmit="return submitLogin(this)">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Utilizador</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" required placeholder="admin">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Palavra-passe</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" required placeholder="admin123">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-box-arrow-in-right"></i> Entrar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

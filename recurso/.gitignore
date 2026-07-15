@@ -1,0 +1,32 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# PHP
+vendor/
+composer.phar
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# C / PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/extensions.json
+
+# IDE
+.idea/
+*.sublime-workspace
+
+# Data images (not the code)
+web/data/camera/imagens/*.jpg
+web/data/camera/imagens/*.png
+
+# PDF gerado
+docs/compilado.pdf

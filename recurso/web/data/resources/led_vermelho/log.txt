@@ -1,0 +1,2 @@
+2026-07-15 14:25:00|OFF|Comando recebido
+2026-07-15 14:22:00|ON|Comando recebido
